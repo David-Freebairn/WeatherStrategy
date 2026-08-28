@@ -1,0 +1,11 @@
+streamlit>=1.36
+pandas
+numpy
+matplotlib
+pyarrow
+plotly
+folium
+streamlit-folium
+xarray
+h5netcdf
+requests
