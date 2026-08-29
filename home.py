@@ -41,6 +41,24 @@ apply_styles()
 
 _ICON_PATH = Path(__file__).resolve().parent / "assets" / "ws_icon.png"
 
+# Basemap for both folium maps below. Carto retired free/anonymous access
+# to its "positron"/"dark_matter" styles (they now serve an "API KEY
+# REQUIRED" watermark instead of tiles), so this uses Esri's light-gray
+# canvas basemap instead — free, no key, similarly minimal. Swap both the
+# URL and attribution together if this provider ever changes too.
+_MAP_TILES = ("https://server.arcgisonline.com/ArcGIS/rest/services/"
+              "Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}")
+_MAP_ATTR = "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ"
+
+# Disables the gesture-based ways a map can rescale itself: mouse-wheel
+# zoom, pinch-zoom, double-click/double-tap zoom, and drag-to-zoom-a-box.
+# This is what was making the maps feel unstable on touch screens — a
+# scroll or a stray two-finger touch was being read as a zoom gesture.
+# Panning (drag) and the +/- zoom buttons stay on, since choosing a
+# location still needs those; only *accidental* rescaling is blocked.
+_MAP_LOCK = dict(scrollWheelZoom=False, touchZoom=False,
+                  doubleClickZoom=False, boxZoom=False, keyboard=False)
+
 ABOUT_TEXT = """
 **To get started:**
 
@@ -96,7 +114,8 @@ def _station_picker_map(stations: list, chosen_label: str):
     spread = max(max(lats) - min(lats), max(lons) - min(lons)) if len(located) > 1 else 0.1
     zoom = 9 if spread < 0.5 else (7 if spread < 2 else 5)
 
-    m = folium.Map(location=center, zoom_start=zoom, tiles="CartoDB positron")
+    m = folium.Map(location=center, zoom_start=zoom, tiles=_MAP_TILES,
+                    attr=_MAP_ATTR, control_scale=True, **_MAP_LOCK)
     for s in located:
         is_chosen = s["label"] == chosen_label
         folium.CircleMarker(
@@ -144,7 +163,7 @@ def _reliability_map(station: dict, radius_km: int):
         )
 
     m = folium.Map(location=[station["lat"], station["lon"]], zoom_start=9,
-                    tiles="CartoDB positron")
+                    tiles=_MAP_TILES, attr=_MAP_ATTR, control_scale=True, **_MAP_LOCK)
     folium.Circle(
         location=[station["lat"], station["lon"]],
         radius=radius_km * 1000,

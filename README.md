@@ -150,6 +150,13 @@ this after that change is deployed: on Streamlit Cloud, editing
 rebuild — use the app's "⋮" menu → **Reboot app**, or delete and
 redeploy the app, to force it to reinstall from a clean environment.
 
+**A map shows a diagonal "API KEY REQUIRED" watermark** — that's the tile
+provider's own overlay, not an app bug. Carto retired free/anonymous
+access to its "positron"/"dark_matter" basemap styles; `home.py` now uses
+Esri's free, key-free light-gray canvas basemap instead (`_MAP_TILES` /
+`_MAP_ATTR` near the top of the file). If a tile provider ever does this
+again, that's the one place to swap it.
+
 **"AGCD tile archive is currently unavailable"** — either no internet
 reachable, or the Google Drive folder/API key stopped working. Check the
 error text shown for specifics; try the bundled sample dataset button if
@@ -183,6 +190,27 @@ weatherstrat/
     ├── tiles/                   downloaded .nc files, one per 1° square
     └── points/                  extracted per-point parquet + metadata json
 ```
+
+## UI notes
+
+- **Maps are locked against accidental rescaling.** Scroll-wheel, pinch,
+  double-click/double-tap, and drag-box zoom are all disabled on both
+  the location-search map and the reliability map — these were the
+  gestures making the maps feel unstable on touch screens (a stray
+  two-finger touch or scroll being read as a zoom). Panning and the
+  deliberate +/− zoom buttons still work. See `_MAP_LOCK` in `home.py`.
+- **Charts are locked against rescaling too.** Both Plotly charts
+  ("What chance?" and "Climate by month") have `dragmode=False` and
+  `fixedrange=True` on every axis, with scroll-zoom and the zoom modebar
+  turned off in `st.plotly_chart`'s `config`. Hover tooltips still work;
+  drag-to-zoom and pinch-zoom don't. The Trend page's charts are static
+  matplotlib images, so they were never zoomable in the first place.
+- **"Change station" is a one-click reset**, not a plain link. A page
+  link alone would take you to Menu with the *previous* station still
+  shown as confirmed, needing a second click there to actually change
+  it. `core/styles.py`'s `change_station_button()` clears the current
+  selection first, then switches to Menu, landing straight on the
+  search box.
 
 ## Known limitations
 
