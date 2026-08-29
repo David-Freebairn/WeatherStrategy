@@ -25,7 +25,7 @@ from datetime import date
 from core.nav import HOME
 from core.agcd import (ensure_climate_cached, slice_climate, AgcdUnavailableError,
                         load_sample_data, describe_grid_cell, grid_cell_warning)
-from core.styles import apply_styles, load_station
+from core.styles import apply_styles, load_station, change_station_button
 
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 
@@ -113,7 +113,7 @@ with c3:
     st.session_state["odds_start_year"] = start_year
 with c4:
     st.markdown('<div style="margin-top:4px">', unsafe_allow_html=True)
-    st.page_link(HOME, label="Change station")
+    change_station_button(HOME, key="odds_change_station")
     st.markdown('</div>', unsafe_allow_html=True)
 
 start_date = date(int(st.session_state.get("odds_start_year", 1900)), 1, 1)
@@ -342,17 +342,20 @@ if st.session_state.get("odds_result"):
             height=320,
             plot_bgcolor=BG, paper_bgcolor=BG,
             margin=dict(l=60, r=60, t=20, b=50),
+            dragmode=False,
             xaxis=dict(
                 title="Season year", title_font=dict(size=10, color="#3a5a7a"),
                 tickfont=dict(size=9, color="#3a5a7a"),
                 tickangle=45 if n > 30 else 0,
                 gridcolor=GRID, showgrid=False, linecolor=GRID,
+                fixedrange=True,
             ),
             yaxis=dict(
                 title=f"Max {int(win_days)}-day rainfall (mm)",
                 title_font=dict(size=10, color="#3a5a7a"),
                 tickfont=dict(size=9, color="#3a5a7a"),
                 gridcolor=GRID, showgrid=True, zeroline=False,
+                fixedrange=True,
             ),
             legend=dict(
                 orientation="h", x=0, y=1.02, xanchor="left", yanchor="bottom",
@@ -360,7 +363,13 @@ if st.session_state.get("odds_result"):
             ),
             bargap=0.28,
         )
-        st.plotly_chart(fig_plotly, width="stretch", key="odds_chart")
+        # Locked: no drag-zoom, scroll-zoom, or pinch-zoom — chart size/scale
+        # is fixed regardless of touch input, only hover tooltips remain.
+        st.plotly_chart(
+            fig_plotly, width="stretch", key="odds_chart",
+            config={"displayModeBar": False, "scrollZoom": False, "doubleClick": False,
+                    "showAxisDragHandles": False, "staticPlot": False},
+        )
 
         # ── Save JPEG before closing fig ───────────────────────────────────
         import io as _io

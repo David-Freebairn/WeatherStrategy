@@ -35,7 +35,7 @@ import streamlit as st
 from core.nav import HOME
 from core.agcd import (ensure_climate_cached, AgcdUnavailableError, load_sample_data,
                         describe_grid_cell, grid_cell_warning)
-from core.styles import apply_styles, load_station
+from core.styles import apply_styles, load_station, change_station_button
 
 apply_styles()
 
@@ -99,7 +99,7 @@ c1, c2 = st.columns([5, 1])
 with c1:
     st.success(f"\U0001F4CD {station.get('label', station.get('name', ''))}")
 with c2:
-    st.page_link(HOME, label="Change station")
+    change_station_button(HOME, key="trend_change_station")
 
 _grid_note = st.session_state.get("agcd_grid_note")
 if _grid_note:
