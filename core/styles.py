@@ -74,8 +74,8 @@ section[data-testid="stSidebar"] [data-testid="stPageLink"] span {
     font-weight: 500;
 }
 
-/* Leaflet/folium map attribution ("Leaflet | (C) OpenStreetMap (C) CARTO")
-   — required by the tile providers' terms, so kept rather than removed,
+/* Leaflet/folium map attribution ("Leaflet | Tiles (C) Esri ...")
+   — required by the tile provider's terms, so kept rather than removed,
    but shrunk and muted so it doesn't cover map content/controls on
    narrow screens (especially iPad/iPhone, where the map itself is short). */
 .leaflet-control-attribution {
@@ -125,3 +125,17 @@ def load_station() -> dict | None:
         station = dict(_DEFAULT_STATION)
     st.session_state["we_station"] = station
     return station
+
+
+def change_station_button(home_page, key: str = "change_station",
+                           label: str = "Change station", width: str = "stretch") -> None:
+    """
+    A "Change station" control for the analysis pages that actually clears
+    the current selection *before* navigating to Menu — unlike a plain
+    st.page_link(home_page), which only navigates, leaving the previous
+    station still marked "confirmed" on arrival and forcing a second
+    click there to actually change it.
+    """
+    if st.button(label, key=key, width=width):
+        st.session_state["we_reset"] = True
+        st.switch_page(home_page)
