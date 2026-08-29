@@ -8,4 +8,5 @@ folium
 streamlit-folium
 xarray
 h5netcdf
+h5py
 requests

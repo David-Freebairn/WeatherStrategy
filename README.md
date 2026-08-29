@@ -140,6 +140,16 @@ files; the file being found isn't enough. In practice:
   check `pip install ...` and `streamlit run ...` are using the *same*
   one (`which python3`, `which streamlit`/`which pip` should agree).
 
+**"Data fetch failed: No module named 'h5py', backend not available"**
+(typically on Streamlit Community Cloud) — `h5netcdf` depends on `h5py`,
+which should install automatically as a dependency but occasionally
+doesn't get picked up cleanly by Streamlit Cloud's build. `requirements.txt`
+now lists `h5py` explicitly as its own line to force it. If you still hit
+this after that change is deployed: on Streamlit Cloud, editing
+`requirements.txt` alone doesn't always trigger a full environment
+rebuild — use the app's "⋮" menu → **Reboot app**, or delete and
+redeploy the app, to force it to reinstall from a clean environment.
+
 **"AGCD tile archive is currently unavailable"** — either no internet
 reachable, or the Google Drive folder/API key stopped working. Check the
 error text shown for specifics; try the bundled sample dataset button if
