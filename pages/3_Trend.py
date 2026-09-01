@@ -11,10 +11,16 @@ record at this point, as:
      segment. This surfaces whether the trend has been stable across
      the record or has sped up/slowed/reversed in different eras — a
      single all-years slope can hide that.
+  3. Anomaly (departure from mean) — a bar per year showing that year's
+     value minus its variable's own long-term mean, green above/red
+     below zero, in the style of the Bureau's own difference-from-average
+     rainfall charts. Always shown for *both* rainfall and temperature,
+     independent of the dropdown that controls charts 1 and 2 — "anomaly"
+     is explicitly mean-based here, never median.
 
-Only full calendar years (>=350 days of record) count toward either
-analysis, so a partial first or last year in the record doesn't skew
-the annual totals/averages.
+Only full calendar years (>=350 days of record) count toward any of the
+three, so a partial first or last year in the record doesn't skew the
+annual totals/averages.
 
 Ported from Weather Explorer's pages/7_Trend.py, reading from
 core/agcd.py instead of core/silo.py. One AGCD-specific addition: the
@@ -108,6 +114,25 @@ _grid_warning = st.session_state.get("agcd_grid_warning")
 if _grid_warning:
     st.warning(_grid_warning, icon="\u26A0\uFE0F")
 
+def _annual_series(df, kind, complete_years):
+    """Full-record annual series for one variable, complete years only.
+    Returns (years, values, unit, y_label). Shared by the trend charts
+    (which follow the page's variable dropdown) and the anomaly section
+    below (which always shows both variables, regardless of the dropdown)."""
+    if kind == "rain":
+        s = df[df["year"].isin(complete_years)].groupby("year")["rain"].sum()
+        unit, y_label = "mm", "Annual rainfall (mm)"
+    else:
+        tmean = (df["tmax"] + df["tmin"]) / 2.0
+        s = tmean.groupby(df["year"]).mean()
+        s = s[s.index.isin(complete_years)]
+        unit, y_label = "\u00b0C", "Annual average temperature (\u00b0C)"
+    # AGCD temperature only starts in 1910 — drop the pre-1910 years here
+    # (all-NaN tmean) rather than let them break a polyfit downstream.
+    s = s.dropna().sort_index()
+    return s.index.values.astype(float), s.values.astype(float), unit, y_label
+
+
 _TREND_OPTIONS = ["Annual rainfall", "Temperature (annual average)"]
 _persisted_var = st.session_state.get("persist_trend_variable", _TREND_OPTIONS[0])
 variable = st.selectbox(
@@ -121,22 +146,9 @@ st.session_state["persist_trend_variable"] = variable
 day_counts = df.groupby("year").size()
 complete_years = day_counts[day_counts >= 350].index
 
-if variable == "Annual rainfall":
-    annual = df[df["year"].isin(complete_years)].groupby("year")["rain"].sum()
-    unit = "mm"
-    y_label = "Annual rainfall (mm)"
-else:
-    tmean = (df["tmax"] + df["tmin"]) / 2.0
-    annual = tmean.groupby(df["year"]).mean()
-    annual = annual[annual.index.isin(complete_years)]
-    unit = "\u00b0C"
-    y_label = "Annual average temperature (\u00b0C)"
-
-# AGCD temperature only starts in 1910 — drop the pre-1910 years here
-# (all-NaN tmean) rather than let them break the polyfit below.
-annual = annual.dropna().sort_index()
-years = annual.index.values.astype(float)
-values = annual.values.astype(float)
+years, values, unit, y_label = _annual_series(
+    df, "rain" if variable == "Annual rainfall" else "temp", complete_years
+)
 
 if len(years) < 8:
     st.warning("Not enough complete years of record at this station for a trend analysis.")
@@ -229,3 +241,44 @@ else:
 
     if period_rows:
         st.dataframe(pd.DataFrame(period_rows), width="stretch", hide_index=True)
+
+# ── Chart 3 — Anomaly (departure from mean) — both variables, always ────────
+st.markdown("### Anomaly (departure from mean)")
+st.caption(
+    "\"Anomaly\" here means each year's value minus that variable's own "
+    "long-term **mean** (average) over its full record \u2014 never the "
+    "median. Green = above average, red = below, in the style of the "
+    "Bureau's own difference-from-average charts. Shown for both "
+    "variables regardless of the dropdown above."
+)
+
+for kind, label in (("rain", "Rainfall"), ("temp", "Temperature")):
+    a_years, a_values, a_unit, a_ylabel = _annual_series(df, kind, complete_years)
+    if len(a_years) < 8:
+        continue  # not enough record for this variable at this site — skip quietly
+
+    a_start, a_end = int(a_years.min()), int(a_years.max())
+    a_mean = float(a_values.mean())
+    anomaly = a_values - a_mean
+    bar_colors = np.where(anomaly >= 0, "#2e7d32", "#c0392b")  # green above / red below
+
+    st.markdown(f"**{label} anomaly**")
+    fig3, ax3 = plt.subplots(figsize=(12, 3.2))
+    _shade_decades(ax3, a_start, a_end)
+    ax3.bar(a_years, anomaly, color=bar_colors, width=0.8, zorder=2)
+    ax3.axhline(0, color="#333333", lw=1.0, zorder=3)
+
+    ax3.set_ylabel(f"Diff. from mean ({a_unit})", fontsize=10)
+    ax3.set_xlim(a_start - 1, a_end + 1)
+    ax3.grid(axis="y", color="#e5e5e5", lw=0.6, zorder=0)
+    ax3.tick_params(labelsize=9)
+    for spine in ("top", "right"):
+        ax3.spines[spine].set_visible(False)
+
+    st.pyplot(fig3, width="stretch")
+    plt.close(fig3)
+
+    st.caption(
+        f"{label} mean over {a_start}\u2013{a_end} ({len(a_years)} complete years): "
+        f"{a_mean:.0f} {a_unit}."
+    )
