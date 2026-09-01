@@ -34,7 +34,10 @@ needs re-fetching once it's on disk.
    amount of rain fallen within a given window, across the record?
 2. **Climate by month** — long-term monthly rainfall/temperature averages.
 3. **Trend vs variability** — annual rainfall/temperature trend over
-   time, both as one all-years fit and as four separate historical eras.
+   time, as one all-years fit, as four separate historical eras, and as
+   an anomaly chart (departure from each variable's own mean — never
+   median — shown for rainfall and temperature together, regardless of
+   which variable the dropdown above it is set to).
 
 These three are otherwise unchanged from Weather Explorer — same charts,
 same JPEG/CSV export, same query controls. Only the daily data underneath
