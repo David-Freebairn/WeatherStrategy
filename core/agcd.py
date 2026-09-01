@@ -24,10 +24,14 @@ to know about them:
 Architecture — delivery via shared Google Drive (Ken Brook, Aug 2026)
 -----------------------------------------------------------------------
 The archive is 869 one-degree netCDF4 tiles (~38 GB total, ~40 MB each),
-one per integer-degree square of Australian land, sitting in Ken's shared
-Google Drive folder (see agcd_point_readme.txt / AGCD_how_it_was_built.docx
+one per integer-degree square of Australian land, sitting in a Google
+Drive folder (see agcd_point_readme.txt / AGCD_how_it_was_built.docx
 section 8 for the reasoning — this is the "home-scale" alternative to a
-proper object store + API). Ported here from Ken's own agcd_point.py:
+proper object store + API). _FOLDER_ID below points at David's own copy
+of that folder (Ken remains the underlying owner) — set to "Anyone with
+the link" access, since the API-key method below can't see a folder
+shared only to a specific account. Ported here from Ken's own
+agcd_point.py:
 
     1. session_state   — instant, same browser session
     2. disk parquet    — one small file per point already extracted
@@ -56,7 +60,7 @@ import numpy as np
 import pandas as pd
 
 # ── Config — Google Drive delivery (see agcd_point_readme.txt) ──────────────
-_FOLDER_ID = "1mX_cXAuhtaCOIvfQJaZvpHcf-xj17s_j"   # Ken's shared tile folder — leave as is
+_FOLDER_ID = "1_0a7XEQMjaTVY6FNIcM6HZf6Hzp7UwU-"   # David's copy of the AGCD tile folder (Ken remains owner)
 _API_KEY   = "AIzaSyAV_AcHCVnyUf5rAXehiCA7EfGkiSK-L_A"  # Ken's key — swap in your own when convenient (see readme)
 
 _ARCHIVE_START = "19000101"
@@ -97,7 +101,7 @@ def _haversine_km(lat1, lon1, lat2, lon2) -> float:
 
 def _find_file_id(name: str) -> "str | None":
     """Look up a tile's Google Drive file id by exact filename, within
-    Ken's shared folder."""
+    the shared tile folder (_FOLDER_ID)."""
     import requests
 
     r = requests.get(
