@@ -99,10 +99,13 @@ to show the caption/warning described above.
    `.nc` file per one-degree square, ~40 MB each. Never expires — the
    archive is frozen, unlike SILO's 24-hour cache.
 
-**Tile delivery mechanics:** tiles live in a folder on Ken's Google Drive,
-shared "anyone with the link". `core/agcd.py` calls the Drive API's
+**Tile delivery mechanics:** tiles live in a Google Drive folder — currently
+David's own copy (`_FOLDER_ID` in `core/agcd.py`; Ken remains the underlying
+owner), shared "Anyone with the link". `core/agcd.py` calls the Drive API's
 `files.list` to find a tile's file id by name, then streams it down from
 `files/{id}?alt=media` — ported directly from Ken's own `agcd_point.py`.
+If this ever needs to point at a different copy of the archive, that's the
+one line to change — see "Testing/swapping the tile folder" below.
 
 **About the API key:** the app ships with Ken's own key (`_API_KEY` near
 the top of `core/agcd.py`). It's a read-only credential against files
@@ -113,8 +116,33 @@ his allowance; and it's simply tidier for requests to be yours if this
 becomes a regular tool or gets passed to clients. To do that: generate a
 free key at console.cloud.google.com (enable the Google Drive API, no
 billing needed — a ten-minute job, no OAuth consent screen, just
-generate-and-copy), then replace the `_API_KEY` string. The `_FOLDER_ID`
-line above it stays as-is — that's what points at Ken's shared archive.
+generate-and-copy), then replace the `_API_KEY` string. `_FOLDER_ID` is
+independent of the key — it can stay as-is.
+
+**Testing/swapping the tile folder:** the API-key method can only see a
+folder shared as **"Anyone with the link"** — a folder shared only to a
+specific Google account (the default when someone shares a folder "with
+you") returns `200` with an *empty* file list, not an error, which looks
+like nothing's wrong until you check closely. To verify a folder id
+before pointing `_FOLDER_ID` at it:
+
+```bash
+python3 - << 'PYEOF'
+import requests
+FOLDER_ID = "paste-the-folder-id-here"
+API_KEY = "AIzaSyAV_AcHCVnyUf5rAXehiCA7EfGkiSK-L_A"
+r = requests.get(
+    "https://www.googleapis.com/drive/v3/files",
+    params={"q": f"'{FOLDER_ID}' in parents and trashed = false",
+            "fields": "files(id,name,size)", "pageSize": 10, "key": API_KEY},
+    timeout=30)
+print(r.status_code, r.text[:1500])
+PYEOF
+```
+
+A working folder returns real `agcd_v101_daily_S##E###.nc` filenames.
+An empty `files: []` at `200` means fix the folder's sharing setting
+(folder → Share → General access → "Anyone with the link") and re-run.
 
 ## Troubleshooting
 
