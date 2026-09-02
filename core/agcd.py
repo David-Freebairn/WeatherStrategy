@@ -172,6 +172,18 @@ def _ensure_tile_cached(tid: str) -> Path:
 
 # ── Point extraction ──────────────────────────────────────────────────────────
 
+def _tile_fingerprint(path: Path) -> tuple:
+    """(size in bytes, short sha256) of a tile file on disk — lets two
+    environments confirm whether they're actually looking at the same
+    physical file when a filename/coordinate match isn't enough proof."""
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return path.stat().st_size, h.hexdigest()[:16]
+
+
 def _extract_point(lat: float, lon: float) -> pd.DataFrame:
     """
     Pull one grid cell's full daily record (1900-2022) out of its tile.
@@ -182,6 +194,7 @@ def _extract_point(lat: float, lon: float) -> pd.DataFrame:
 
     tid = tile_id(lat, lon)
     path = _ensure_tile_cached(tid)
+    tile_size, tile_hash = _tile_fingerprint(path)
 
     with xr.open_dataset(path) as ds:
         pt = ds.sel(lat=lat, lon=lon, method="nearest").load()
@@ -208,6 +221,8 @@ def _extract_point(lat: float, lon: float) -> pd.DataFrame:
 
     df.attrs["source"]        = "AGCD v1-0-1"
     df.attrs["tile_id"]       = tid
+    df.attrs["tile_size"]     = tile_size
+    df.attrs["tile_sha256_16"] = tile_hash
     df.attrs["pixel_centre"]  = (px_lat, px_lon)
     df.attrs["distance_km"]   = dist_km
     df.attrs["mean_weight"]   = weight_mean
@@ -287,6 +302,26 @@ def grid_cell_warning(df: pd.DataFrame) -> "str | None":
     """Either of the two sanity-check warnings computed at extraction
     time (far-away match / likely-offshore match), if either fired."""
     return df.attrs.get("distance_warning") or df.attrs.get("offshore_warning")
+
+
+def describe_tile_fingerprint(df: pd.DataFrame) -> "str | None":
+    """
+    One-line summary of exactly which physical tile file backs this
+    record — its byte size and a short sha256 — so two environments
+    (e.g. local vs a Streamlit Cloud deployment) that both claim to be
+    reading "the same tile" can be compared directly by a single string,
+    rather than by re-deriving and comparing hundreds of rows of output.
+    A mismatch here means the two environments are NOT reading the same
+    file, whatever their filenames or folder configs suggest — most
+    likely a stale local/deployed cache, or a genuinely different file
+    at the source. Returns None if this came from a disk cache written
+    before this field existed (no fingerprint recorded).
+    """
+    size = df.attrs.get("tile_size")
+    h = df.attrs.get("tile_sha256_16")
+    if size is None or h is None:
+        return None
+    return f"Tile file: {size:,} bytes, sha256 {h}\u2026"
 
 
 # ── Shared session-state + disk cache (mirrors core/silo.py) ────────────────
