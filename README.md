@@ -185,6 +185,22 @@ order:
    criteria" column between them — this pinpoints the specific years
    (and via the daily data, the specific rain events) actually in
    question, which is far more precise than comparing two percentages.
+4. If the two environments still disagree after a genuine cache clear
+   and reboot, don't stop at comparing filenames, folder IDs, or grid
+   cell coordinates — none of those prove the two environments are
+   reading the same *bytes*. Every grid-cell caption now includes a
+   small monospaced line: `Tile file: 47,069,570 bytes, sha256
+   a1b2c3d4e5f6…` (from `describe_tile_fingerprint()` in
+   `core/agcd.py`). Compare that single string between environments —
+   if it differs, they are provably reading two different files
+   regardless of what their filenames or configs suggest, which points
+   straight at a caching or deployment mismatch rather than a data or
+   code problem. This is also how we found, in practice, that a
+   GitHub repo kept via manual "Upload files" rather than `git push`
+   can drift out of sync with a local copy without any obvious sign —
+   worth checking `core/agcd.py`'s `_FOLDER_ID` line and the presence
+   of the `name contains` fallback query directly on GitHub if this
+   comes up again.
 
 **"Data fetch failed: found the following matches with the input file
 in xarray's IO backends... dependencies may not be installed"** — xarray
