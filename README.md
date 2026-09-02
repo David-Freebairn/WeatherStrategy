@@ -163,6 +163,29 @@ everywhere else in the app.
 
 ## Troubleshooting
 
+**Local and deployed (or two deployed) environments give slightly
+different percentages on "What chance?"** for the same station/query —
+almost never a rounding issue (each disagreeing *year* moves the overall
+percentage by roughly `100/n_years`, e.g. ~0.8 points with 123 years of
+record, so a few points' gap means several years are genuinely
+classified differently). Usual cause: the two environments have cached
+different vintages of the same tile — `.agcd_cache/` is deliberately
+never invalidated (the archive is supposed to be frozen), so if
+`_FOLDER_ID` changed at some point, an environment that cached a tile
+*before* the change keeps using it silently, with no error. Fixes, in
+order:
+1. Clear the cache and re-fetch: `rm -rf .agcd_cache/tiles/*.nc
+   .agcd_cache/points/*.parquet .agcd_cache/points/*.json`, then re-run
+   and re-select the station.
+2. On Streamlit Cloud specifically, a `git push` alone doesn't clear a
+   running container's disk — use **⋮ menu → Reboot app** to force it.
+3. To find exactly which years disagree rather than just the headline
+   percentage: open "What chance?"'s **"Year-by-year detail"** expander
+   and download the CSV from each environment, then diff the "Met
+   criteria" column between them — this pinpoints the specific years
+   (and via the daily data, the specific rain events) actually in
+   question, which is far more precise than comparing two percentages.
+
 **"Data fetch failed: found the following matches with the input file
 in xarray's IO backends... dependencies may not be installed"** — xarray
 needs `netCDF4` or `h5netcdf` installed to actually open `.nc` tile
