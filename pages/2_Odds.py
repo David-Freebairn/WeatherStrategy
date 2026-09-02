@@ -298,6 +298,30 @@ if st.session_state.get("odds_result"):
 </div>
 """, unsafe_allow_html=True)
 
+        # ── Diagnostic: year-by-year detail (for comparing environments) ────
+        with st.expander("\U0001F50D Year-by-year detail (for comparing local vs deployed results)"):
+            st.caption(
+                "One row per year: the wettest \"{0}\"-day window found within "
+                "{1}\u2013{2}, and whether it reached {3} mm. If two environments "
+                "disagree on the overall percentage, download both CSVs and diff "
+                "the \"met_criteria\" column to find exactly which years differ."
+                .format(int(win_days), slabel.split(" \u2013 ")[0], slabel.split(" \u2013 ")[1], int(threshold))
+            )
+            detail = annual_max.rename(columns={
+                "season_year": "Year", "max_roll_mm": f"Wettest {int(win_days)}-day total (mm)",
+                "met_criteria": "Met criteria", "occasions": "Windows \u2265 threshold",
+            }).copy()
+            detail[f"Wettest {int(win_days)}-day total (mm)"] = detail[f"Wettest {int(win_days)}-day total (mm)"].round(1)
+            detail["Met criteria"] = detail["Met criteria"].map({1: "Yes", 0: "No"})
+            st.dataframe(detail, width="stretch", hide_index=True)
+            st.download_button(
+                "\U0001F4E5 Download year-by-year CSV",
+                data=detail.to_csv(index=False),
+                file_name=f"whatchance_{sid or 'site'}_{threshold}mm_{win_days}d_{slabel.replace(' ', '')}.csv",
+                mime="text/csv",
+                key="odds_yearly_csv",
+            )
+
         # ── Interactive Plotly chart ────────────────────────────────────────
         NAVY = "#0b1f3a"; BLUE = "#2979c4"; BRIGHT = "#4da6ff"
         MISS = "#b8cfe8"; BG = "#f7fafd"; GRID = "#dde5ee"
