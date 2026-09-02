@@ -60,7 +60,7 @@ import numpy as np
 import pandas as pd
 
 # ── Config — Google Drive delivery (see agcd_point_readme.txt) ──────────────
-_FOLDER_ID = "1_0a7XEQMjaTVY6FNIcM6HZf6Hzp7UwU-"   # David's copy of the AGCD tile folder (Ken remains owner)
+_FOLDER_ID = "1l9ptW0KHxCeniJ2iOiSe3wcGjLafxgAb"   # AGCD tile folder currently in use
 _API_KEY   = "AIzaSyAV_AcHCVnyUf5rAXehiCA7EfGkiSK-L_A"  # Ken's key — swap in your own when convenient (see readme)
 
 _ARCHIVE_START = "19000101"
@@ -99,23 +99,36 @@ def _haversine_km(lat1, lon1, lat2, lon2) -> float:
 
 # ── Google Drive lookup + download (ported from Ken's agcd_point.py) ────────
 
-def _find_file_id(name: str) -> "str | None":
-    """Look up a tile's Google Drive file id by exact filename, within
-    the shared tile folder (_FOLDER_ID)."""
+def _drive_query(q: str) -> list:
     import requests
 
     r = requests.get(
         "https://www.googleapis.com/drive/v3/files",
-        params={
-            "q": f"'{_FOLDER_ID}' in parents and name = '{name}' and trashed = false",
-            "fields": "files(id,name)",
-            "key": _API_KEY,
-        },
+        params={"q": q, "fields": "files(id,name)", "key": _API_KEY},
         timeout=30,
     )
     r.raise_for_status()
-    files = r.json().get("files", [])
-    return files[0]["id"] if files else None
+    return r.json().get("files", [])
+
+
+def _find_file_id(name: str) -> "str | None":
+    """
+    Look up a tile's Google Drive file id by filename, within the shared
+    tile folder (_FOLDER_ID). Tries an exact match first (the normal
+    case: agcd_v101_daily_S28E151.nc); if that finds nothing, falls back
+    to a substring match, since some copies of the archive pick up a
+    renamed filename along the way — e.g. Drive's own "Make a copy"
+    action prepends "Copy of " to every file. This keeps any folder
+    working without needing to know its exact naming quirk in advance.
+    If several files match the substring (e.g. a folder with more than
+    one stray copy of the same tile), the first result is used.
+    """
+    exact = _drive_query(f"'{_FOLDER_ID}' in parents and name = '{name}' and trashed = false")
+    if exact:
+        return exact[0]["id"]
+
+    fuzzy = _drive_query(f"'{_FOLDER_ID}' in parents and name contains '{name}' and trashed = false")
+    return fuzzy[0]["id"] if fuzzy else None
 
 
 def _download_tile(name: str, dest: Path) -> None:
