@@ -35,7 +35,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 import numpy as np
-import pandas as pd
 import streamlit as st
 
 from core.nav import HOME
@@ -224,8 +223,8 @@ else:
         )
         period_rows.append({
             "Period": f"{int(py[0])}\u2013{int(py[-1])}",
-            f"Trend ({unit}/yr)": round(pslope, 3),
-            f"Average ({unit})": round(pv.mean(), 1),
+            "Trend": pslope,
+            "Average": pv.mean(),
         })
 
     ax2.set_ylabel(y_label, fontsize=10)
@@ -240,17 +239,64 @@ else:
     plt.close(fig2)
 
     if period_rows:
-        st.dataframe(pd.DataFrame(period_rows), width="stretch", hide_index=True)
+        # "Whole period" summarises the same all-years fit as the chart
+        # above, sitting above the four sub-periods for direct comparison.
+        whole_row = {"Period": f"Whole period ({start_year}\u2013{end_year})",
+                     "Trend": slope_all, "Average": overall_mean}
+
+        head_style = ("padding:8px 12px;text-align:center;font-size:0.85rem;"
+                      "font-weight:600;color:white;background:#1a5276;")
+        label_style = "padding:7px 12px;text-align:left;font-size:0.88rem;"
+        num_style = "padding:7px 12px;text-align:center;font-size:0.88rem;"
+
+        html = ['<table style="border-collapse:collapse;width:100%;max-width:600px;">']
+        html.append(
+            "<tr>"
+            f'<th style="{head_style}text-align:left;">Period</th>'
+            f'<th style="{head_style}">Trend ({unit}/yr)</th>'
+            f'<th style="{head_style}">Average ({unit})</th>'
+            "</tr>"
+        )
+        html.append(
+            "<tr>"
+            f'<td style="{label_style}background:#dfe6ea;font-weight:700;color:#1c1c1c;">'
+            f'{whole_row["Period"]}</td>'
+            f'<td style="{num_style}background:#dfe6ea;font-weight:700;color:#1c1c1c;">'
+            f'{whole_row["Trend"]:+.3f}</td>'
+            f'<td style="{num_style}background:#dfe6ea;font-weight:700;color:#1c1c1c;">'
+            f'{whole_row["Average"]:.1f}</td>'
+            "</tr>"
+        )
+        row_colors = ["#2e86c1", "#5dade2"]
+        for i, r in enumerate(period_rows):
+            bg = row_colors[i % len(row_colors)]
+            html.append(
+                "<tr>"
+                f'<td style="{label_style}background:{bg};color:white;">{r["Period"]}</td>'
+                f'<td style="{num_style}background:{bg};color:white;">{r["Trend"]:+.3f}</td>'
+                f'<td style="{num_style}background:{bg};color:white;">{r["Average"]:.1f}</td>'
+                "</tr>"
+            )
+        html.append("</table>")
+        st.markdown("".join(html), unsafe_allow_html=True)
 
 # ── Chart 3 — Anomaly (departure from mean) — both variables, always ────────
 st.markdown("### Anomaly (departure from mean)")
 st.caption(
     "\"Anomaly\" here means each year's value minus that variable's own "
     "long-term **mean** (average) over its full record \u2014 never the "
-    "median. Green = above average, red = below, in the style of the "
-    "Bureau's own difference-from-average charts. Shown for both "
-    "variables regardless of the dropdown above."
+    "median \u2014 in the style of the Bureau's own difference-from-average "
+    "charts. Rainfall: blue = above average, brown = below. Temperature: "
+    "red = above average, light blue = below. Shown for both variables "
+    "regardless of the dropdown above."
 )
+
+# Positive/negative bar colours, per variable (not the same for both:
+# rainfall uses blue/brown, temperature uses red/light-blue).
+_ANOMALY_COLORS = {
+    "rain": ("#2471A3", "#8B5E3C"),   # above mean: blue   / below mean: brown
+    "temp": ("#C0392B", "#85C1E9"),   # above mean: red    / below mean: light blue
+}
 
 for kind, label in (("rain", "Rainfall"), ("temp", "Temperature")):
     a_years, a_values, a_unit, a_ylabel = _annual_series(df, kind, complete_years)
@@ -260,7 +306,8 @@ for kind, label in (("rain", "Rainfall"), ("temp", "Temperature")):
     a_start, a_end = int(a_years.min()), int(a_years.max())
     a_mean = float(a_values.mean())
     anomaly = a_values - a_mean
-    bar_colors = np.where(anomaly >= 0, "#2e7d32", "#c0392b")  # green above / red below
+    pos_color, neg_color = _ANOMALY_COLORS[kind]
+    bar_colors = np.where(anomaly >= 0, pos_color, neg_color)
 
     st.markdown(f"**{label} anomaly**")
     fig3, ax3 = plt.subplots(figsize=(12, 3.2))
