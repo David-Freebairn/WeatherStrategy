@@ -39,7 +39,7 @@ import streamlit as st
 
 from core.nav import HOME
 from core.agcd import (ensure_climate_cached, AgcdUnavailableError, load_sample_data,
-                        describe_grid_cell, grid_cell_warning)
+                        describe_grid_cell, grid_cell_warning, describe_tile_fingerprint)
 from core.styles import apply_styles, load_station, change_station_button
 
 apply_styles()
@@ -92,6 +92,7 @@ with st.spinner(f"Loading climate data for {station['name']}\u2026 (first load m
         full_df = ensure_climate_cached(sid, lat=lat, lon=lon, session_state=st.session_state)
         st.session_state["agcd_grid_note"] = describe_grid_cell(full_df)
         st.session_state["agcd_grid_warning"] = grid_cell_warning(full_df)
+        st.session_state["agcd_tile_fingerprint"] = describe_tile_fingerprint(full_df)
     except AgcdUnavailableError as e:
         _handle_agcd_down(e)
     except Exception as e:
@@ -112,6 +113,9 @@ if _grid_note:
 _grid_warning = st.session_state.get("agcd_grid_warning")
 if _grid_warning:
     st.warning(_grid_warning, icon="\u26A0\uFE0F")
+_tile_fp = st.session_state.get("agcd_tile_fingerprint")
+if _tile_fp:
+    st.caption(f"`{_tile_fp}`")
 
 def _annual_series(df, kind, complete_years):
     """Full-record annual series for one variable, complete years only.

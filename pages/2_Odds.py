@@ -24,7 +24,7 @@ from datetime import date
 
 from core.nav import HOME
 from core.agcd import (ensure_climate_cached, slice_climate, AgcdUnavailableError,
-                        load_sample_data, describe_grid_cell, grid_cell_warning)
+                        load_sample_data, describe_grid_cell, grid_cell_warning, describe_tile_fingerprint)
 from core.styles import apply_styles, load_station, change_station_button
 
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -124,6 +124,9 @@ if _grid_note:
 _grid_warning = st.session_state.get("agcd_grid_warning")
 if _grid_warning:
     st.warning(_grid_warning, icon="\u26A0\uFE0F")
+_tile_fp = st.session_state.get("agcd_tile_fingerprint")
+if _tile_fp:
+    st.caption(f"`{_tile_fp}`")
 
 # ── Panel 2 — Query ───────────────────────────────────────────────────────────
 r1a, r1b, r1c, r1d, r1e = st.columns([2.5, 0.8, 1.2, 0.8, 0.6])
@@ -220,6 +223,7 @@ if _input_key != st.session_state.get("odds_input_key") or not _has_result:
                                             session_state=st.session_state)
             st.session_state["agcd_grid_note"] = describe_grid_cell(full_df)
             st.session_state["agcd_grid_warning"] = grid_cell_warning(full_df)
+            st.session_state["agcd_tile_fingerprint"] = describe_tile_fingerprint(full_df)
             df = slice_climate(full_df, start=start_date.strftime("%Y%m%d"))
             df = parse_df(df)
         except AgcdUnavailableError as e:
