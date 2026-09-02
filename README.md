@@ -34,10 +34,14 @@ needs re-fetching once it's on disk.
    amount of rain fallen within a given window, across the record?
 2. **Climate by month** — long-term monthly rainfall/temperature averages.
 3. **Trend vs variability** — annual rainfall/temperature trend over
-   time, as one all-years fit, as four separate historical eras, and as
-   an anomaly chart (departure from each variable's own mean — never
-   median — shown for rainfall and temperature together, regardless of
-   which variable the dropdown above it is set to).
+   time, as one all-years fit (with a "whole period" row summarising it,
+   above the four-period breakdown table), as four separate historical
+   eras, and as an anomaly chart (departure from each variable's own
+   mean — never median — shown for rainfall and temperature together,
+   regardless of which variable the dropdown above it is set to).
+   Rainfall anomaly bars are blue above the mean / brown below;
+   temperature anomaly bars are red above / light blue below — a
+   deliberately different palette per variable, not shared.
 
 These three are otherwise unchanged from Weather Explorer — same charts,
 same JPEG/CSV export, same query controls. Only the daily data underneath
@@ -146,6 +150,16 @@ PYEOF
 A working folder returns real `agcd_v101_daily_S##E###.nc` filenames.
 An empty `files: []` at `200` means fix the folder's sharing setting
 (folder → Share → General access → "Anyone with the link") and re-run.
+
+**Renamed tiles (e.g. "Copy of agcd_v101_daily_S28E151.nc"):** copying
+files in Drive (its own "Make a copy" action, or some copy workflows)
+prepends "Copy of " to the filename. `_find_file_id()` in `core/agcd.py`
+handles this automatically — it tries an exact filename match first,
+and only if that finds nothing falls back to a substring match, so a
+renamed tile still resolves without needing to know the exact prefix in
+advance. Locally cached tiles are always saved under their clean
+canonical name regardless of what Drive calls them, so this is invisible
+everywhere else in the app.
 
 ## Troubleshooting
 
